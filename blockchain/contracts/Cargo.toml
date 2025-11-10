@@ -70,6 +70,31 @@ members = [
     "programs/*",
     "tests/*",
 ]
+// x402-client.ts
+import fetch from "node-fetch";
+
+type AccessToken = { token: string; expiresAt: number };
+
+export async function requestAccess(paymentTxSig: string): Promise<AccessToken> {
+  const res = await fetch(process.env.X402_GATEWAY + "/v1/access", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "X-402-Payment": paymentTxSig },
+    body: JSON.stringify({ scope: ["bridge:mint", "bridge:redeem"] })
+  });
+  if (!res.ok) throw new Error(`x402 access failed: ${res.status}`);
+  return res.json();
+}
+
+export async function bridgeMint(token: AccessToken, proof: string, commitment: string) {
+  const res = await fetch(process.env.X402_GATEWAY + "/v1/bridge/mint", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token.token}` },
+    body: JSON.stringify({ zkProof: proof, cm: commitment })
+  });
+  if (!res.ok) throw new Error(`bridge mint failed: ${res.status}`);
+  return res.json();
+}
+
 
 [workspace.dependencies]
 anchor-lang = "0.29.0"
